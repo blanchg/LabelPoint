@@ -10,29 +10,29 @@
 
 (function (window, undefined) {
     var LabelPoint = {
-        find: function (points, precision) {
+        find: function (points, holes, precision) {
+            if (holes == undefined)
+                holes = [];
             if (precision == undefined) {
                 precision = 1;
             }
             var x_min, y_min, x_max, y_max;
-            for (var i = 0; i < points.length; i++) {
-                if (i == 0) {
-                    x_min = x_max = points[i].x;
-                    y_min = y_max = points[i].y;
-                }
-                else {
-                    x_min = Math.min(x_min, points[i].x);
-                    x_max = Math.max(x_max, points[i].x);
-                    y_min = Math.min(y_min, points[i].y);
-                    y_max = Math.max(y_max, points[i].y);
-                }
+            var p = points[0];
+            x_min = x_max = p.x;
+            y_min = y_max = p.y;
+            for (var i = 1; i < points.length; i++) {
+                p = points[i];
+                if (x_min>p.x) x_min = p.x;
+                if (x_max<p.x) x_max = p.x;
+                if (y_min>p.y) y_min = p.y;
+                if (y_max<p.y) y_max = p.y;
             }
-            var lp = this.poleScan(x_min, y_min, x_max, y_max, points);
+            var lp = this.poleScan(x_min, y_min, x_max, y_max, points, holes);
             if (precision > 0) {
                 var r = ((x_max - x_min) * (y_max - y_min));
                 var dx, dy;
                 while (r > precision) {
-                    lp = this.poleScan(x_min, y_min, x_max, y_max, points);
+                    lp = this.poleScan(x_min, y_min, x_max, y_max, points, holes);
                     dx = (x_max - x_min) / 24;
                     dy = (y_max - y_min) / 24;
                     x_min = lp.x - dx;
@@ -95,18 +95,29 @@
             return minDistance;
         },
         isInside: function (x, y, points) {
-            for (var c = false, i = -1, l = points.length, j = l - 1; ++i < l; j = i)
-                ((points[i].y <= y && y < points[j].y) || (points[j].y <= y && y < points[i].y))
-                    && (x < (points[j].x - points[i].x) * (y - points[i].y) / (points[j].y - points[i].y) + points[i].x)
-                && (c = !c);
+            for (var c = false, i = -1, l = points.length, j = l - 1; ++i < l; j = i) {
+                var pi = points[i];
+                var pj = points[j];
+                ((pi.y <= y && y < pj.y) || (pj.y <= y && y < pi.y))
+                    && (x < (pj.x - pi.x) * (y - pi.y) / (pj.y - pi.y) + pi.x)
+                    && (c = !c);
+            }
             return c;
         },
-        poleScan: function (x_min, y_min, x_max, y_max, points) {
+        poleScan: function (x_min, y_min, x_max, y_max, points, holes) {
             var px, py, pd, maxDistance = 0;
+            var allpoints = points.concat.apply(points, holes);
             for (var y = y_min; y < y_max; y += ((y_max - y_min) / 24)) {
                 for (var x = x_min; x < x_max; x += ((x_max - x_min) / 24)) {
                     if (this.isInside(x, y, points)) {
-                        pd = this.pointToPerimeterDistance(x, y, points);
+                        var inHole = false;
+                        for (var i = 0; i < holes.length && !inHole; i++) {
+                            var hole = holes[i];
+                            inHole = this.isInside(x, y, hole);
+                        }
+                        if (inHole)
+                            continue;
+                        pd = this.pointToPerimeterDistance(x, y, allpoints);
                         if (pd > maxDistance) {
                             maxDistance = pd;
                             px = x;
