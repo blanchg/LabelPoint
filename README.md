@@ -10,8 +10,9 @@ The Poles of Inaccessibility algorithm works by finding a point inside the polyg
 Just pass in an array of points and a desired precision (defaults to 1 - pixel perfect. Increase for speed at reduced accuracy)
 ```
 var points = [ {x:0, y:0}, {x:5, y:0}, {x:5, y:5}, {x:0, y:5} ];
+var holes [[{}, {}, {}], ... ]; // example only
 var precision = 1;
-var labelPoint = LabelPoint.find(points, precision);
+var labelPoint = LabelPoint.find(points, holes, precision);
 console.log(labelPoint.x, labelPoint.y);
 ```
 
